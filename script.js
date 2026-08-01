@@ -1,60 +1,51 @@
+
 const button = document.getElementById("generateBtn");
 const progress = document.getElementById("progress");
 const downloadBtn = document.getElementById("downloadBtn");
 const promptInput = document.getElementById("prompt");
-const imageInput = document.getElementById("image");
 const durationInput = document.getElementById("duration");
 
-button.addEventListener("click", () => {
+button.addEventListener("click", async () => {
   const prompt = promptInput.value.trim();
 
-  if (prompt === "") {
+  if (!prompt) {
     alert("Please enter a video prompt.");
     return;
   }
 
   button.disabled = true;
   button.innerText = "Generating...";
-  progress.value = 0;
 
-  let value = 0;
+  try {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        prompt,
+        duration: durationInput.value
+      })
+    });
 
-  const timer = setInterval(() => {
-    value += 5;
-    progress.value = value;
-    if (value >= 100) {
-      clearInterval(timer);
-
-      button.disabled = false;
-      button.innerText = "Generate Video";
-
-      downloadBtn.style.display = "inline-block";
-      downloadBtn.innerText = "Download Demo";
-
-      if (imageInput.files.length > 0) {
-        downloadBtn.href = URL.createObjectURL(imageInput.files[0]);
-      } else {
-        downloadBtn.href = "#";
-      }
-
-      alert(
-        "Demo completed successfully!\n\n" +
-        "Prompt: " + prompt + "\n" +
-        "Duration: " + durationInput.value + "\n\n" +
-        "Next step: Connect Hugging Face AI Video API."
-      );
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text);
     }
-  }, 200);
-});
-      } else {
-        downloadBtn.removeAttribute("href");
-        downloadBtn.onclick = () => {
-          alert("Demo complete! Connect an AI API to generate real videos.");
-        };
-      }
 
-      alert("Video generation completed successfully!");
-    }
-  }, 100);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
 
+    downloadBtn.href = url;
+    downloadBtn.download = "video.mp4";
+    downloadBtn.style.display = "inline-block";
+    downloadBtn.innerText = "Download Video";
+
+    alert("Video generated successfully!");
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+
+  button.disabled = false;
+  button.innerText = "Generate Video";
 });
